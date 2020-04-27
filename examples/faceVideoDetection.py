@@ -82,10 +82,10 @@ class DetectionPipeline:
         return faces    
 
 # Define face detection pipeline
-detection_pipeline = DetectionPipeline(detector=mtcnn, n_frames=100, batch_size=32, resize=None)
+detection_pipeline = DetectionPipeline(detector=mtcnn, n_frames=20, batch_size=32, resize=None)
 # Get all test videos
-filenames = glob.glob('D:/Dataset/*.mp4')
-outRoot = 'D:/Dataset/ai_pictures_adapted'
+filenames = glob.glob('D:/BaiduNetdiskDownload/c23Original/*.mp4')
+outRoot = 'D:/Dataset/c23Original'
 
 X = []
 start = time.time()
@@ -103,6 +103,8 @@ with torch.no_grad():
 
             for i in range(len(faces)):
                 face = faces[i].cpu().clone()
+                if face.shape[0] > 1:
+                    face = face[0]
                 face = face.squeeze(0) / 255
                 face = torchvision.transforms.ToPILImage()(face)
                 face.save(os.path.join(faceOutPath, '{}.jpg'.format(i)))
