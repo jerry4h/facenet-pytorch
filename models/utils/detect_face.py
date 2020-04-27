@@ -300,7 +300,28 @@ def get_size(img):
         return img.size
 
 
-def extract_face(img, box, image_size=160, margin=0, save_path=None):
+def resize_box(box, image_size=160):
+    """Resize box to fixed scale rate.
+
+    Arguments:
+        box {numpy.ndarray} -- left, up, right, bottom
+        image_size {int} -- image_size
+    """
+    if not isinstance(image_size, int):
+        raise NotImplementedError
+    # import pdb
+    # pdb.set_trace()
+    centers = [(box[0]+box[2])/2., (box[1]+box[3])/2.]
+    l = (box[2] + box[3] - box[0] - box[1])/2.
+    box[0] = centers[0] - l/2.
+    box[1] = centers[1] - l/2.
+    box[2] = centers[0] + l/2.
+    box[3] = centers[1] + l/2.
+    return box
+
+
+
+def extract_face(img, box, image_size=160, margin=0, save_path=None, adapt_size=False):
     """Extract face + margin from PIL Image given bounding box.
     
     Arguments:
@@ -312,10 +333,15 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
             repo, which applies the margin to the original image before resizing, making the margin
             dependent on the original image size.
         save_path {str} -- Save path for extracted face image. (default: {None})
+        adapt_size {bool} -- whether to resize box to image_size, avoiding stretch with different
+            scale for height/ weight dimension 
     
     Returns:
         torch.tensor -- tensor representing the extracted face.
     """
+    if adapt_size:
+        box = resize_box(box)
+    
     margin = [
         margin * (box[2] - box[0]) / (image_size - margin),
         margin * (box[3] - box[1]) / (image_size - margin),

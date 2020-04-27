@@ -279,7 +279,7 @@ class MTCNN(nn.Module):
                     save_name, ext = os.path.splitext(path_im)
                     face_path = save_name + '_' + str(i + 1) + ext
 
-                face = extract_face(im, box, self.image_size, self.margin, face_path)
+                face = extract_face(im, box, self.image_size, self.margin, face_path, adapt_size=True)
                 if self.post_process:
                     face = fixed_image_standardization(face)
                 faces_im.append(face)
