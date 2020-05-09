@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 import os
 
-from .utils.detect_face import detect_face, extract_face
+from .utils.detect_face import detect_face, extract_face, align_face
 
 
 class PNet(nn.Module):
@@ -211,7 +211,7 @@ class MTCNN(nn.Module):
             self.device = device
             self.to(device)
 
-    def forward(self, img, save_path=None, return_prob=False):
+    def forward(self, img, save_path=None, return_prob=False, align=False):
         """Run MTCNN face detection on a PIL image or numpy array. This method performs both
         detection and extraction of faces, returning tensors representing detected faces rather
         than the bounding boxes. To access bounding boxes, see the MTCNN.detect() method below.
@@ -244,7 +244,7 @@ class MTCNN(nn.Module):
 
         # Detect faces
         with torch.no_grad():
-            batch_boxes, batch_probs = self.detect(img)
+            batch_boxes, batch_probs, batch_points = self.detect(img, landmarks=True)
 
         # Determine if a batch or single image was passed
         batch_mode = True
@@ -252,6 +252,7 @@ class MTCNN(nn.Module):
             img = [img]
             batch_boxes = [batch_boxes]
             batch_probs = [batch_probs]
+            batch_points = [batch_points]
             batch_mode = False
 
         # Parse save path(s)
@@ -262,24 +263,29 @@ class MTCNN(nn.Module):
             save_path = [None for _ in range(len(img))]
         
         # Process all bounding boxes and probabilities
-        faces, probs = [], []
-        for im, box_im, prob_im, path_im in zip(img, batch_boxes, batch_probs, save_path):
+        faces, probs, points = [], [], []
+        for im, box_im, prob_im, point_im, path_im in zip(img, batch_boxes, batch_probs, batch_points, save_path):
             if box_im is None:
                 faces.append(None)
                 probs.append([None] if self.keep_all else None)
+                points.append(None)
                 continue
 
             if not self.keep_all:
                 box_im = box_im[[0]]
+                point_im = point_im[[0]]
 
             faces_im = []
-            for i, box in enumerate(box_im):
+            for i, (box, point) in enumerate(zip(box_im, point_im)):
                 face_path = path_im
                 if path_im is not None and i > 0:
                     save_name, ext = os.path.splitext(path_im)
                     face_path = save_name + '_' + str(i + 1) + ext
 
-                face = extract_face(im, box, self.image_size, self.margin, face_path, adapt_size=True)
+                if align:
+                    face = align_face(im, point, self.image_size, self.margin, face_path)
+                else:
+                    face = extract_face(im, box, self.image_size, self.margin, face_path, adapt_size=True)
                 if self.post_process:
                     face = fixed_image_standardization(face)
                 faces_im.append(face)

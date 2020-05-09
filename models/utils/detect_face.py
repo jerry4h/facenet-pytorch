@@ -7,6 +7,10 @@ from PIL import Image
 import numpy as np
 import os
 
+from .align_trans import Alignmenter
+
+alignMenter = Alignmenter()
+
 
 def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
     if isinstance(imgs, (np.ndarray, torch.Tensor)):
@@ -309,8 +313,6 @@ def resize_box(box, image_size=160):
     """
     if not isinstance(image_size, int):
         raise NotImplementedError
-    # import pdb
-    # pdb.set_trace()
     centers = [(box[0]+box[2])/2., (box[1]+box[3])/2.]
     l = (box[2] + box[3] - box[0] - box[1])/2.
     box[0] = centers[0] - l/2.
@@ -318,7 +320,6 @@ def resize_box(box, image_size=160):
     box[2] = centers[0] + l/2.
     box[3] = centers[1] + l/2.
     return box
-
 
 
 def extract_face(img, box, image_size=160, margin=0, save_path=None, adapt_size=False):
@@ -355,6 +356,38 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None, adapt_size=
     ]
 
     face = crop_resize(img, box, image_size)
+
+    if save_path is not None:
+        os.makedirs(os.path.dirname(save_path) + "/", exist_ok=True)
+        save_img(face, save_path)
+
+    face = F.to_tensor(np.float32(face))
+
+    return face
+
+
+def align_face(img, point, image_size=160, margin=0, save_path=None):
+    """Extract face + margin from PIL Image given bounding box.
+    
+    Arguments:
+        img {PIL.Image} -- A PIL Image.
+        box {numpy.ndarray} -- Four-element bounding box.
+        image_size {int} -- Output image size in pixels. The image will be square.
+        margin {int} -- Margin to add to bounding box, in terms of pixels in the final image. 
+            Note that the application of the margin differs slightly from the davidsandberg/facenet
+            repo, which applies the margin to the original image before resizing, making the margin
+            dependent on the original image size.
+        save_path {str} -- Save path for extracted face image. (default: {None})
+        adapt_size {bool} -- whether to resize box to image_size, avoiding stretch with different
+            scale for height/ weight dimension 
+    
+    Returns:
+        torch.tensor -- tensor representing the extracted face.
+    """
+
+    point_flattened = np.transpose(point, (1,0)).reshape(1, -1)
+
+    face = alignMenter.align(img, point_flattened, crop_size=image_size, margin=margin)
 
     if save_path is not None:
         os.makedirs(os.path.dirname(save_path) + "/", exist_ok=True)
