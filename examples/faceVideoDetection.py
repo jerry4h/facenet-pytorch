@@ -22,10 +22,10 @@ def get_args():
     parser.add_argument('--size', type=int,
                         help='Size for detected faces', default=256)
     parser.add_argument('--margin', type=int,
-                        help='Margin for detected faces', default=80)
+                        help='Margin for detected faces, has been deprecated for alignment.', default=80)
     parser.add_argument('--nsample', type=int,
                         help='Sample number per video', default=100)
-    parser.add_argument('--noAlign', action='store_true',
+    parser.add_argument('--align', action='store_true', default=False,
                         help='Whether align face or not')
     args = parser.parse_args()
     print(args)
@@ -106,7 +106,7 @@ class DetectionPipeline:
         return faces    
 
 # Define face detection pipeline
-detection_pipeline = DetectionPipeline(detector=mtcnn, n_frames=args.nsample, batch_size=32, resize=None, align=not args.noAlign)
+detection_pipeline = DetectionPipeline(detector=mtcnn, n_frames=args.nsample, batch_size=32, resize=None, align=args.align)
 # Get all test videos
 filenames = glob.glob(args.src)
 outRoot = args.dst

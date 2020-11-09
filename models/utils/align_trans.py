@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from .matlab_cp2tform import get_similarity_transform_for_cv2
 
-BIAS = -15
+BIAS = -10 # -15 bias changed to -10.
 # reference facial points, a list of coordinates (x,y)
 REFERENCE_FACIAL_POINTS = [        # default reference facial points for crop_size = (112, 112); should adjust REFERENCE_FACIAL_POINTS accordingly for other crop_size
     [30.29459953,  51.69630051+BIAS], 
@@ -297,26 +297,31 @@ def warp_and_crop_face(src_img,
 
 
 class Alignmenter:
-    def __init__(self, crop_size=112, margin=0):
+    def __init__(self, crop_size=112, margin=0, scale=1.2):
+        print("Warning: margin deprecated. use scale instead.")
         self.params = {
             'reference': get_reference_facial_points(default_square=True),
-            'params': [112, 0]
+            'params': [112, 0, 0]
         }
-        self.exam_params(crop_size, margin)
+        self.exam_params(crop_size, margin, scale)
     
-    def exam_params(self, crop_size=112, margin=0):
-        if not self.params['params'] == [crop_size, margin]:
-            self.params['params'] = [crop_size, margin]
-            self.params['reference'] = get_reference_facial_points(
+    def exam_params(self, crop_size=112, margin=0, scale=1.3):
+        margin = 0 # margin deprecated.
+        if self.params['params'] != [crop_size, margin, scale]:
+            self.params['params'] = [crop_size, margin, scale]
+            ref = get_reference_facial_points(
                 output_size = None,
                 inner_padding_factor = np.array([0.15*margin/crop_size]),
                 outer_padding=(0, 0),
                 default_square = True
-            ) * crop_size/112.
+            )
+            ref = (ref - 56) * (1 / scale) + 56
+            ref *= crop_size / 112.
+            self.params['reference'] = ref
         return
 
-    def align(self, img, points, crop_size=112, margin=0):
-        self.exam_params(crop_size, margin)
+    def align(self, img, points, crop_size=112, margin=0, scale=1.2):
+        self.exam_params(crop_size, margin, scale)
 
         facial5points = [[points[0][j], points[0][j + 5]] for j in range(5)]
         # print('facial5points\n', facial5points)
