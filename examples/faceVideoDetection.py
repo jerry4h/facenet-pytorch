@@ -38,7 +38,7 @@ print(f'Running on device: {device}')
 args = get_args()
 
 # Load face detector
-mtcnn = MTCNN(image_size=args.size, margin=args.margin, min_face_size=40, keep_all=True, factor=0.5, post_process=False, device=device).eval()
+mtcnn = MTCNN(image_size=args.size, margin=args.margin, min_face_size=40, thresholds=[0.7, 0.8, 0.9], keep_all=True, factor=0.5, post_process=False, device=device).eval()
 
 
 class DetectionPipeline:
@@ -127,12 +127,19 @@ with torch.no_grad():
             os.makedirs(faceOutPath + "/", exist_ok=True)
 
             for i in range(len(faces)):
-                face = faces[i].cpu().clone()
+                face = faces[i]
+                if face is None:
+                    continue
+                face = face.cpu().clone()
                 if face.shape[0] > 1:
-                    face = face[0]
-                face = face.squeeze(0) / 255
-                face = torchvision.transforms.ToPILImage()(face)
-                face.save(os.path.join(faceOutPath, '{}.jpg'.format(i)))
+                    for idx, face_i in enumerate(face):
+                        face_i = face_i / 255
+                        face_i = torchvision.transforms.ToPILImage()(face_i)
+                        face_i.save(os.path.join(faceOutPath, '{}_{}.jpg'.format(i, idx)))
+                else:
+                    face = face.squeeze(0) / 255
+                    face = torchvision.transforms.ToPILImage()(face)
+                    face.save(os.path.join(faceOutPath, '{}.jpg'.format(i)))
             # plt.imshow(face)
             # plt.show()
             # plt.pause(0.001)
